@@ -1,26 +1,29 @@
-package tlsSpoofer_go
+package main
 
 import (
-	"github.com/gorilla/websocket"
-	"net/http"
-	"time"
+	"flag"
+	"github.com/jellyb0y/TLS-Spoofer/tlsSpoofer-go/config"
+	. "github.com/jellyb0y/TLS-Spoofer/tlsSpoofer-go/wsServer"
+	"log"
+	"os"
 )
 
-type WSServer struct{}
+var EnvConfigFlag, FileConfigFlag bool
 
-func (ws *WSServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-
-}
-
-func (ws *WSServer) Serve() error {
-	config := NewConfig()
-	s := &http.Server{
-		Handler:     ws,
-		ReadTimeout: time.Duration(config.ReadTimeout),
+func main() {
+	var helpFlag bool
+	flag.BoolVar(&EnvConfigFlag, "env-config", false, "use config from ENV")
+	flag.BoolVar(&FileConfigFlag, "file-config", false, "use config from .toml file")
+	flag.BoolVar(&helpFlag, "help", false, "print help")
+	flag.Parse()
+	if helpFlag {
+		flag.Usage()
+		os.Exit(0)
+	} else {
+		wsServer := NewWSServer(config.Options{
+			EnvConfig:  EnvConfigFlag,
+			FileConfig: FileConfigFlag,
+		})
+		log.Fatal(wsServer.Serve())
 	}
-	uprgader := websocket.Upgrader{
-		ReadBufferSize:  1024,
-		WriteBufferSize: 1024,
-	}
-	return s.ListenAndServe()
 }

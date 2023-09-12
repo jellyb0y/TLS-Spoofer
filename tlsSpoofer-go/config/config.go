@@ -11,30 +11,27 @@ import (
 	"strconv"
 )
 
-type Options struct {
+type ConfigOptions struct {
 	EnvConfig  bool
 	FileConfig bool
 }
 
 // Config конфиг WSSserver
 type Config struct {
-	ListenPort      int `toml:"listen-port"`
-	ReadTimeout     int `toml:"read-timeout"`
-	GoroutinesCount int `toml:"goroutines-count"`
-	ReadBufferSize  int `toml:"read-buffer-size"`
-	WriteBufferSize int `toml:"write-buffer-size"`
+	ListenPort           int `toml:"listen-port"`
+	ReadTimeout          int `toml:"read-timeout"`
+	GoroutinesCount      int `toml:"goroutines-count"`
+	ContextCancelTimeout int `toml:"context-cancel-timeout"`
 }
 
 // NewConfig конструктор Config с дефолтными значениями
-func NewConfig(options Options) *Config {
+func NewConfig(options ConfigOptions) *Config {
 
 	// настройки по умолчанию
 	config := &Config{
 		ListenPort:      8080,
 		ReadTimeout:     1,
 		GoroutinesCount: 10,
-		ReadBufferSize:  1024,
-		WriteBufferSize: 1024,
 	}
 
 	switch {
@@ -65,21 +62,13 @@ func NewConfig(options Options) *Config {
 				}
 				config.GoroutinesCount = goroutinesCountValue
 			}
-			readBufferSize, existsReadBufferSize := os.LookupEnv("WS_READ_BUFFER_SIZE")
-			if existsReadBufferSize {
-				readBufferSizeValue, err := strconv.Atoi(readBufferSize)
+			contextCancelTimeout, existsContextCancelTimeout := os.LookupEnv("WS_CONTEXT_CANCEL_TIMEOUT")
+			if existsContextCancelTimeout {
+				contextCancelTimeoutValue, err := strconv.Atoi(contextCancelTimeout)
 				if err != nil {
 					log.Fatal(err)
 				}
-				config.ReadTimeout = readBufferSizeValue
-			}
-			writeBufferSize, existsWriteBufferSize := os.LookupEnv("WS_READ_BUFFER_SIZE")
-			if existsWriteBufferSize {
-				writeBufferSizeValue, err := strconv.Atoi(writeBufferSize)
-				if err != nil {
-					log.Fatal(err)
-				}
-				config.ReadTimeout = writeBufferSizeValue
+				config.ContextCancelTimeout = contextCancelTimeoutValue
 			}
 			log.Println("using ENV config")
 

@@ -2,5 +2,4 @@
 listen-port = 8080
 read-timeout = 1
 goroutines-count = 10
-read-buffer-size = 1024
-write-buffer-size = 1024
+context-cancel-timeou = 10

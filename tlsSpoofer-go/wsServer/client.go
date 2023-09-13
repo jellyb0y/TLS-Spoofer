@@ -1,8 +1,8 @@
 package wsServer
 
 import (
+	http "github.com/Danny-Dasilva/fhttp"
 	"golang.org/x/net/proxy"
-	"net/http"
 	"time"
 )
 

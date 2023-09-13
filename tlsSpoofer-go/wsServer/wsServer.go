@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	http "github.com/Danny-Dasilva/fhttp"
 	http2 "github.com/Danny-Dasilva/fhttp"
 	. "github.com/jellyb0y/TLS-Spoofer/tlsSpoofer-go/config"
 	"io/ioutil"
 	"log"
-	"net/http"
+	nhttp "net/http"
 	"net/url"
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
@@ -18,7 +19,7 @@ import (
 
 type WSServer struct {
 	Config *Config
-	Server *http.Server
+	Server *nhttp.Server
 }
 
 // Options sets CycleTLS client options
@@ -314,16 +315,16 @@ func writeSocket(respChan chan Response, c *websocket.Conn) {
 
 func NewWSServer(config *Config) *WSServer {
 	ws := &WSServer{Config: config}
-	ws.Server = &http.Server{
+	ws.Server = &nhttp.Server{
 		Handler:     ws,
 		ReadTimeout: time.Duration(ws.Config.ReadTimeout),
 		Addr:        fmt.Sprintf(":%d", ws.Config.ListenPort),
 	}
-	http.Handle("/", ws)
+	nhttp.Handle("/", ws)
 	return ws
 }
 
-func (ws *WSServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (ws *WSServer) ServeHTTP(w nhttp.ResponseWriter, r *nhttp.Request) {
 	connection, err := websocket.Accept(w, r, nil)
 	if err != nil {
 		log.Fatal(err)

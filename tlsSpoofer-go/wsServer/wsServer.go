@@ -11,9 +11,8 @@ import (
 	"net/http"
 	"net/url"
 	"nhooyr.io/websocket"
-	"runtime"
+	"nhooyr.io/websocket/wsjson"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -43,14 +42,14 @@ type cycleTLSRequest struct {
 	Options   Options `json:"options"`
 }
 
-//rename to request+client+options
+// rename to request+client+options
 type fullRequest struct {
 	req     *http.Request
 	client  http.Client
 	options cycleTLSRequest
 }
 
-//Response contains Cycletls response data
+// Response contains Cycletls response data
 type Response struct {
 	RequestID string
 	Status    int
@@ -58,7 +57,7 @@ type Response struct {
 	Headers   map[string]string
 }
 
-//JSONBody converts response body to json
+// JSONBody converts response body to json
 func (re Response) JSONBody() map[string]interface{} {
 	var data map[string]interface{}
 	err := json.Unmarshal([]byte(re.Body), &data)
@@ -68,7 +67,7 @@ func (re Response) JSONBody() map[string]interface{} {
 	return data
 }
 
-//CycleTLS creates full request and response
+// CycleTLS creates full request and response
 type CycleTLS struct {
 	ReqChan  chan fullRequest
 	RespChan chan Response
@@ -284,19 +283,11 @@ func worker(reqChan chan fullRequest, respChan chan Response) {
 
 func readSocket(reqChan chan fullRequest, c *websocket.Conn) {
 	for {
-		_, message, err := c.ReadMessage()
-		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				return
-			}
-			log.Print("Socket Error", err)
-			return
-		}
 		request := new(cycleTLSRequest)
 
-		err = json.Unmarshal(message, &request)
+		err := wsjson.Read(context.Background(), c, &request)
 		if err != nil {
-			log.Print("Unmarshal Error", err)
+			log.Print("Read socket unmarshal Error", err)
 			return
 		}
 
@@ -310,12 +301,7 @@ func writeSocket(respChan chan Response, c *websocket.Conn) {
 	for {
 		select {
 		case r := <-respChan:
-			message, err := json.Marshal(r)
-			if err != nil {
-				log.Print("Marshal Json Failed" + err.Error())
-				continue
-			}
-			err = c.WriteMessage(websocket.TextMessage, message)
+			err := wsjson.Write(context.Background(), c, r)
 			if err != nil {
 				log.Print("Socket WriteMessage Failed" + err.Error())
 				continue
@@ -347,17 +333,8 @@ func (ws *WSServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	respChan := make(chan Response)
 	go workerPool(reqChan, respChan)
 
-	go readSocket(reqChan, ws)
-	//run as main thread
-	writeSocket(respChan, ws)
-	var wg *sync.WaitGroup
-	for {
-		if runtime.NumGoroutine() < ws.Config.GoroutinesCount {
-			wg.Add(1)
-			// read and write
-		}
-	}
-	wg.Wait()
+	go readSocket(reqChan, connection)
+	go writeSocket(respChan, connection)
 }
 
 func (ws *WSServer) Serve() error {
